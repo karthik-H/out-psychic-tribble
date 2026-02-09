@@ -1,5 +1,631 @@
 {
-  "function": [],
+  "function": [
+    {
+      "implementation_id": "ekm_controller_run_extraction_cycle",
+      "test_cases": [
+        {
+          "description": "Validates that the extraction cycle is completed successfully when all services operate as expected.",
+          "id": "run_extraction_cycle_positive_successful_cycle",
+          "implementation_id": "ekm_controller_run_extraction_cycle",
+          "name": "successful_extraction_cycle",
+          "test_setup": {
+            "given": "Repository, hashing, and ingestion services are initialized and functional. EKM API returns valid meter data. All logs are available.",
+            "then": "Meter data is fetched, hashed, and ingested without exceptions. Logs reflect successful steps. Function sleeps for 1 minute before next cycle.",
+            "when": "run_extraction_cycle is called and allowed to execute a single cycle."
+          },
+          "type": "positive"
+        },
+        {
+          "description": "Ensures the extraction cycle logs an error and continues if the EKM API fails to fetch meter data.",
+          "id": "run_extraction_cycle_negative_api_failure",
+          "implementation_id": "ekm_controller_run_extraction_cycle",
+          "name": "ekm_api_failure",
+          "test_setup": {
+            "given": "Repository and services are initialized. EKM API raises an exception on data fetch.",
+            "then": "Error is logged. The function does not attempt hashing or ingestion for this cycle. After sleeping 1 minute, the next cycle is attempted.",
+            "when": "run_extraction_cycle is called."
+          },
+          "type": "negative"
+        },
+        {
+          "description": "Verifies error handling and logging when hashing the meter data fails.",
+          "id": "run_extraction_cycle_negative_hashing_failure",
+          "implementation_id": "ekm_controller_run_extraction_cycle",
+          "name": "hashing_failure",
+          "test_setup": {
+            "given": "Meter data is fetched successfully. Hashing service raises an exception during hashing.",
+            "then": "Error is logged. The ingestion step is not executed for this cycle. After sleeping 1 minute, the next cycle is attempted.",
+            "when": "run_extraction_cycle is called."
+          },
+          "type": "negative"
+        },
+        {
+          "description": "Checks that if ingestion to the cloud fails, the error is logged and subsequent cycles continue.",
+          "id": "run_extraction_cycle_negative_ingestion_failure",
+          "implementation_id": "ekm_controller_run_extraction_cycle",
+          "name": "ingestion_failure",
+          "test_setup": {
+            "given": "Meter data is fetched and hashed successfully. Ingestion service raises an exception during ingestion.",
+            "then": "Error is logged. The cycle ends and after sleeping 1 minute, the next cycle is attempted.",
+            "when": "run_extraction_cycle is called."
+          },
+          "type": "negative"
+        },
+        {
+          "description": "Tests how the function handles the case when the EKM API returns empty meter data.",
+          "id": "run_extraction_cycle_edge_empty_meter_data",
+          "implementation_id": "ekm_controller_run_extraction_cycle",
+          "name": "empty_meter_data",
+          "test_setup": {
+            "given": "EKM API returns an empty list or object as meter data. Hashing and ingestion services accept empty data.",
+            "then": "Empty data is logged, hashed, and ingested successfully. No errors are logged.",
+            "when": "run_extraction_cycle is called."
+          },
+          "type": "edge"
+        },
+        {
+          "description": "Tests the function's ability to process very large meter data responses.",
+          "id": "run_extraction_cycle_edge_large_meter_data",
+          "implementation_id": "ekm_controller_run_extraction_cycle",
+          "name": "large_meter_data",
+          "test_setup": {
+            "given": "EKM API returns a very large meter data set. Hashing and ingestion services can handle large payloads.",
+            "then": "Large meter data is fetched, hashed, and ingested without errors. Logs reflect data size.",
+            "when": "run_extraction_cycle is called."
+          },
+          "type": "edge"
+        },
+        {
+          "description": "Ensures that logging failures (e.g., log service exception) are handled gracefully and do not halt the cycle.",
+          "id": "run_extraction_cycle_negative_logging_failure",
+          "implementation_id": "ekm_controller_run_extraction_cycle",
+          "name": "logging_failure",
+          "test_setup": {
+            "given": "Log service raises an exception during logging at any step.",
+            "then": "Logging failures are caught and do not prevent the rest of the cycle from executing. Extraction, hashing, and ingestion still proceed.",
+            "when": "run_extraction_cycle is called."
+          },
+          "type": "negative"
+        },
+        {
+          "description": "Verifies the function respects a reconfigured short interval (e.g., 1 second) for rapid cycles.",
+          "id": "run_extraction_cycle_edge_short_sleep_interval",
+          "implementation_id": "ekm_controller_run_extraction_cycle",
+          "name": "short_sleep_interval",
+          "test_setup": {
+            "given": "Sleep interval is configured to 1 second instead of 1 minute.",
+            "then": "Each cycle occurs every 1 second. All steps are executed as normal.",
+            "when": "run_extraction_cycle is called for several cycles."
+          },
+          "type": "edge"
+        },
+        {
+          "description": "Verifies the function respects a reconfigured long interval (e.g., 10 minutes) between extraction cycles.",
+          "id": "run_extraction_cycle_edge_long_sleep_interval",
+          "implementation_id": "ekm_controller_run_extraction_cycle",
+          "name": "long_sleep_interval",
+          "test_setup": {
+            "given": "Sleep interval is set to 10 minutes.",
+            "then": "There is a 10-minute sleep between cycles. All steps are executed as normal.",
+            "when": "run_extraction_cycle is called for two cycles."
+          },
+          "type": "edge"
+        },
+        {
+          "description": "Tests how the function handles failures during initialization of repository, hashing, or ingestion services.",
+          "id": "run_extraction_cycle_negative_initialization_failure",
+          "implementation_id": "ekm_controller_run_extraction_cycle",
+          "name": "service_initialization_failure",
+          "test_setup": {
+            "given": "Repository, hashing, or ingestion service raises an exception during initialization.",
+            "then": "Exception is raised and logged before entering the loop. No extraction cycle is started.",
+            "when": "run_extraction_cycle is called."
+          },
+          "type": "negative"
+        }
+      ]
+    },
+    {
+      "implementation_id": "ekm_api_repository_fetch_meter_data",
+      "test_cases": [
+        {
+          "description": "Verify that the function returns a MeterData object when provided with a valid meter ID and valid API credentials.",
+          "id": "TC_001_successful_fetch_valid_meter",
+          "implementation_id": "ekm_api_repository_fetch_meter_data",
+          "name": "Successful fetch with valid meter ID and API credentials",
+          "test_setup": {
+            "given": "A valid meter ID and valid API credentials are provided. The EKM API is available and returns a 200 OK response with well-formed JSON containing required fields.",
+            "then": "The function returns a MeterData object populated with extracted meter fields.",
+            "when": "fetch_meter_data is called with the valid meter ID and credentials."
+          },
+          "type": "positive"
+        },
+        {
+          "description": "Verify that the function raises a RuntimeError when provided with an invalid meter ID, resulting in a 404 Not Found from the EKM API.",
+          "id": "TC_002_invalid_meter_id",
+          "implementation_id": "ekm_api_repository_fetch_meter_data",
+          "name": "Fetch with invalid meter ID",
+          "test_setup": {
+            "given": "An invalid meter ID is provided. The EKM API returns 404 Not Found.",
+            "then": "The function raises a RuntimeError indicating a failed fetch.",
+            "when": "fetch_meter_data is called with the invalid meter ID."
+          },
+          "type": "negative"
+        },
+        {
+          "description": "Verify that the function raises a RuntimeError when invalid API credentials are used, resulting in a 401 Unauthorized response from the EKM API.",
+          "id": "TC_003_invalid_api_credentials",
+          "implementation_id": "ekm_api_repository_fetch_meter_data",
+          "name": "Fetch with invalid API credentials",
+          "test_setup": {
+            "given": "A valid meter ID but invalid API credentials are provided. The EKM API returns 401 Unauthorized.",
+            "then": "The function raises a RuntimeError indicating a failed fetch.",
+            "when": "fetch_meter_data is called with invalid credentials."
+          },
+          "type": "negative"
+        },
+        {
+          "description": "Verify that the function raises a RuntimeError when the API request times out due to network issues.",
+          "id": "TC_004_api_timeout",
+          "implementation_id": "ekm_api_repository_fetch_meter_data",
+          "name": "API request timeout",
+          "test_setup": {
+            "given": "A valid meter ID and credentials are provided, but the network connection to the EKM API is slow or unavailable, causing a timeout.",
+            "then": "The function raises a RuntimeError indicating a failed fetch.",
+            "when": "fetch_meter_data is called and the GET request times out."
+          },
+          "type": "edge"
+        },
+        {
+          "description": "Verify that the function raises a RuntimeError when the API returns a response with invalid JSON.",
+          "id": "TC_005_malformed_json_response",
+          "implementation_id": "ekm_api_repository_fetch_meter_data",
+          "name": "Malformed JSON response from API",
+          "test_setup": {
+            "given": "A valid meter ID and credentials are provided. The EKM API returns a 200 OK response, but the response body is not valid JSON.",
+            "then": "The function raises a RuntimeError indicating a failed fetch.",
+            "when": "fetch_meter_data is called and attempts to parse the malformed JSON."
+          },
+          "type": "negative"
+        },
+        {
+          "description": "Verify that the function raises a RuntimeError when the API response JSON does not include all required meter fields.",
+          "id": "TC_006_missing_required_meter_fields",
+          "implementation_id": "ekm_api_repository_fetch_meter_data",
+          "name": "Missing required meter fields in API response",
+          "test_setup": {
+            "given": "A valid meter ID and credentials are provided. The EKM API returns a well-formed JSON response missing one or more required fields.",
+            "then": "The function raises a RuntimeError indicating a failed fetch.",
+            "when": "fetch_meter_data attempts to extract required meter fields."
+          },
+          "type": "edge"
+        },
+        {
+          "description": "Verify that the function raises a RuntimeError when the API returns a non-successful HTTP status (e.g., 500 Internal Server Error).",
+          "id": "TC_007_api_returns_error_status",
+          "implementation_id": "ekm_api_repository_fetch_meter_data",
+          "name": "API returns error HTTP status",
+          "test_setup": {
+            "given": "A valid meter ID and credentials are provided. The EKM API returns a 500 Internal Server Error.",
+            "then": "The function raises a RuntimeError indicating a failed fetch.",
+            "when": "fetch_meter_data is called and receives the error status."
+          },
+          "type": "negative"
+        },
+        {
+          "description": "Verify that the function raises a RuntimeError when the API returns an empty response body.",
+          "id": "TC_008_empty_response_body",
+          "implementation_id": "ekm_api_repository_fetch_meter_data",
+          "name": "Empty response body from API",
+          "test_setup": {
+            "given": "A valid meter ID and credentials are provided. The EKM API returns a 200 OK response, but the response body is empty.",
+            "then": "The function raises a RuntimeError indicating a failed fetch.",
+            "when": "fetch_meter_data attempts to parse the empty response."
+          },
+          "type": "edge"
+        },
+        {
+          "description": "Verify that the function can successfully handle multiple successive calls with valid input without leaking resources or causing exceptions.",
+          "id": "TC_009_multiple_successive_calls",
+          "implementation_id": "ekm_api_repository_fetch_meter_data",
+          "name": "Multiple successive fetch calls",
+          "test_setup": {
+            "given": "A valid meter ID and credentials are provided. The EKM API is available and returns correct data for each call.",
+            "then": "Each call returns a MeterData object as expected.",
+            "when": "fetch_meter_data is called multiple times in succession."
+          },
+          "type": "positive"
+        },
+        {
+          "description": "Verify that the function properly handles meter IDs containing special or non-ASCII characters.",
+          "id": "TC_010_special_characters_in_meter_id",
+          "implementation_id": "ekm_api_repository_fetch_meter_data",
+          "name": "Meter ID with special characters",
+          "test_setup": {
+            "given": "A meter ID containing special characters is provided. The EKM API returns a valid response or an error depending on support.",
+            "then": "The function returns a MeterData object if API succeeds, or raises RuntimeError if API fails.",
+            "when": "fetch_meter_data is called with the special character meter ID."
+          },
+          "type": "edge"
+        }
+      ]
+    },
+    {
+      "implementation_id": "hashing_service_hash_meter_data",
+      "test_cases": [
+        {
+          "description": "Ensure that hashing and signing valid meter data returns a valid hex-encoded signature.",
+          "id": "TC1_hash_valid_meter_data",
+          "implementation_id": "hashing_service_hash_meter_data",
+          "name": "test_hash_with_valid_meter_data",
+          "test_setup": {
+            "given": "A well-formed meter data dictionary and a valid private key.",
+            "then": "A non-empty string containing a valid hexadecimal signature is returned.",
+            "when": "hash_meter_data is called with the meter data and private key."
+          },
+          "type": "positive"
+        },
+        {
+          "description": "Test hashing and signing when meter data is an empty dictionary.",
+          "id": "TC2_hash_empty_meter_data",
+          "implementation_id": "hashing_service_hash_meter_data",
+          "name": "test_hash_with_empty_meter_data",
+          "test_setup": {
+            "given": "An empty meter data dictionary and a valid private key.",
+            "then": "A valid hex-encoded signature is still returned, representing the signed hash of an empty JSON object.",
+            "when": "hash_meter_data is called with the empty data and private key."
+          },
+          "type": "edge"
+        },
+        {
+          "description": "Ensure hashing and signing works correctly with meter data containing Unicode characters.",
+          "id": "TC3_hash_data_with_unicode_characters",
+          "implementation_id": "hashing_service_hash_meter_data",
+          "name": "test_hash_with_unicode_characters",
+          "test_setup": {
+            "given": "Meter data dictionary with Unicode characters in string values and a valid private key.",
+            "then": "A valid hex-encoded signature is returned.",
+            "when": "hash_meter_data is called with the Unicode data and private key."
+          },
+          "type": "positive"
+        },
+        {
+          "description": "Test function with a very large meter data dictionary to ensure performance and correctness.",
+          "id": "TC4_hash_large_meter_data",
+          "implementation_id": "hashing_service_hash_meter_data",
+          "name": "test_hash_with_large_meter_data",
+          "test_setup": {
+            "given": "A meter data dictionary with thousands of key-value pairs and a valid private key.",
+            "then": "A valid hex-encoded signature is returned without performance issues.",
+            "when": "hash_meter_data is called with the large data and private key."
+          },
+          "type": "edge"
+        },
+        {
+          "description": "Test that passing an invalid type for the private key raises an error.",
+          "id": "TC5_invalid_private_key_type",
+          "implementation_id": "hashing_service_hash_meter_data",
+          "name": "test_invalid_private_key_type",
+          "test_setup": {
+            "given": "Valid meter data and an invalid private key type (e.g., string instead of key object).",
+            "then": "A TypeError or ValueError is raised indicating an invalid private key.",
+            "when": "hash_meter_data is called."
+          },
+          "type": "negative"
+        },
+        {
+          "description": "Test that omitting the private key argument raises an error.",
+          "id": "TC6_missing_private_key",
+          "implementation_id": "hashing_service_hash_meter_data",
+          "name": "test_missing_private_key",
+          "test_setup": {
+            "given": "Valid meter data but private key is None or not provided.",
+            "then": "A TypeError or similar exception is raised due to missing argument.",
+            "when": "hash_meter_data is called."
+          },
+          "type": "negative"
+        },
+        {
+          "description": "Test that passing unserializable meter data raises a serialization error.",
+          "id": "TC7_unserializable_meter_data",
+          "implementation_id": "hashing_service_hash_meter_data",
+          "name": "test_unserializable_meter_data",
+          "test_setup": {
+            "given": "A meter data dictionary containing an unserializable object (e.g., a function or open file handle) and a valid private key.",
+            "then": "A TypeError or JSON serialization error is raised.",
+            "when": "hash_meter_data is called."
+          },
+          "type": "negative"
+        },
+        {
+          "description": "Test that non-dictionary meter data (e.g., list, string) raises an error.",
+          "id": "TC8_hash_with_non_dict_meter_data",
+          "implementation_id": "hashing_service_hash_meter_data",
+          "name": "test_hash_with_non_dict_meter_data",
+          "test_setup": {
+            "given": "Meter data provided as a list or string instead of dictionary and a valid private key.",
+            "then": "A TypeError or ValueError is raised indicating unsupported input data type.",
+            "when": "hash_meter_data is called."
+          },
+          "type": "negative"
+        },
+        {
+          "description": "Ensure that the returned signature is hex-encoded and of the expected length.",
+          "id": "TC9_signature_hex_encoding",
+          "implementation_id": "hashing_service_hash_meter_data",
+          "name": "test_signature_hex_encoding",
+          "test_setup": {
+            "given": "A valid meter data dictionary and a valid private key.",
+            "then": "The returned signature is a hex string and its length is twice the length of the raw signature bytes.",
+            "when": "hash_meter_data is called."
+          },
+          "type": "positive"
+        },
+        {
+          "description": "Test using a private key of unsupported algorithm (e.g., EC key instead of RSA) to ensure proper error handling.",
+          "id": "TC10_private_key_wrong_algorithm",
+          "implementation_id": "hashing_service_hash_meter_data",
+          "name": "test_private_key_wrong_algorithm",
+          "test_setup": {
+            "given": "Valid meter data and a private key object that is not RSA (e.g., EC key).",
+            "then": "A NotImplementedError or similar exception is raised, indicating unsupported key type for signing.",
+            "when": "hash_meter_data is called."
+          },
+          "type": "negative"
+        }
+      ]
+    },
+    {
+      "implementation_id": "cloud_ingestion_service_ingest",
+      "test_cases": [
+        {
+          "description": "Test ingestion when the POST request returns a successful status and valid JSON response.",
+          "id": "tc_ingest_successful_post",
+          "implementation_id": "cloud_ingestion_service_ingest",
+          "name": "successful_ingest_with_valid_hashed_data",
+          "test_setup": {
+            "given": "A valid cloud ingest URL and valid hashed meter data as input.",
+            "then": "Returns the JSON response from the cloud ingestion endpoint.",
+            "when": "The ingest function is called."
+          },
+          "type": "positive"
+        },
+        {
+          "description": "Test ingestion when the POST request returns a non-2xx HTTP status (e.g., 400 Bad Request).",
+          "id": "tc_ingest_post_non_2xx_response",
+          "implementation_id": "cloud_ingestion_service_ingest",
+          "name": "ingest_with_non_successful_http_status",
+          "test_setup": {
+            "given": "A valid cloud ingest URL and valid hashed meter data, but the endpoint returns 400 Bad Request.",
+            "then": "Raises a RuntimeError indicating ingestion failed.",
+            "when": "The ingest function is called."
+          },
+          "type": "negative"
+        },
+        {
+          "description": "Test ingestion when the POST request times out due to network issues.",
+          "id": "tc_ingest_post_connection_timeout",
+          "implementation_id": "cloud_ingestion_service_ingest",
+          "name": "ingest_with_connection_timeout",
+          "test_setup": {
+            "given": "A valid cloud ingest URL and valid hashed meter data, but the network times out.",
+            "then": "Raises a RuntimeError indicating ingestion failed due to timeout.",
+            "when": "The ingest function is called."
+          },
+          "type": "negative"
+        },
+        {
+          "description": "Test ingestion when the POST request returns a successful HTTP status but the response body is not valid JSON.",
+          "id": "tc_ingest_post_invalid_json_response",
+          "implementation_id": "cloud_ingestion_service_ingest",
+          "name": "ingest_with_invalid_json_response",
+          "test_setup": {
+            "given": "A valid cloud ingest URL and valid hashed meter data, but the response body is not JSON.",
+            "then": "Raises a RuntimeError due to JSON parsing failure.",
+            "when": "The ingest function is called."
+          },
+          "type": "edge"
+        },
+        {
+          "description": "Test ingestion when the input hashed meter data is empty.",
+          "id": "tc_ingest_post_empty_data",
+          "implementation_id": "cloud_ingestion_service_ingest",
+          "name": "ingest_with_empty_hashed_data",
+          "test_setup": {
+            "given": "A valid cloud ingest URL and empty hashed meter data.",
+            "then": "Returns the JSON response from the cloud ingestion endpoint or raises an error if the endpoint rejects empty data.",
+            "when": "The ingest function is called."
+          },
+          "type": "edge"
+        },
+        {
+          "description": "Test ingestion when the cloud ingest URL is malformed.",
+          "id": "tc_ingest_post_malformed_url",
+          "implementation_id": "cloud_ingestion_service_ingest",
+          "name": "ingest_with_malformed_url",
+          "test_setup": {
+            "given": "A malformed cloud ingest URL and valid hashed meter data.",
+            "then": "Raises a RuntimeError due to failed ingestion.",
+            "when": "The ingest function is called."
+          },
+          "type": "negative"
+        },
+        {
+          "description": "Test ingestion with extremely large hashed meter data to test system limits.",
+          "id": "tc_ingest_post_large_data",
+          "implementation_id": "cloud_ingestion_service_ingest",
+          "name": "ingest_with_large_hashed_data",
+          "test_setup": {
+            "given": "A valid cloud ingest URL and very large hashed meter data.",
+            "then": "Returns the JSON response from the cloud ingestion endpoint or raises an error if the endpoint cannot handle large data.",
+            "when": "The ingest function is called."
+          },
+          "type": "edge"
+        },
+        {
+          "description": "Test ingestion when hashed meter data contains special and unicode characters.",
+          "id": "tc_ingest_post_special_characters_data",
+          "implementation_id": "cloud_ingestion_service_ingest",
+          "name": "ingest_with_special_characters_in_hashed_data",
+          "test_setup": {
+            "given": "A valid cloud ingest URL and hashed meter data containing special/unicode characters.",
+            "then": "Returns the JSON response from the cloud ingestion endpoint or raises an error if the endpoint rejects such characters.",
+            "when": "The ingest function is called."
+          },
+          "type": "edge"
+        },
+        {
+          "description": "Test ingestion when the cloud ingest URL is unreachable (e.g., DNS failure or no network).",
+          "id": "tc_ingest_post_cloud_url_unreachable",
+          "implementation_id": "cloud_ingestion_service_ingest",
+          "name": "ingest_with_unreachable_cloud_url",
+          "test_setup": {
+            "given": "An unreachable cloud ingest URL and valid hashed meter data.",
+            "then": "Raises a RuntimeError indicating ingestion failed due to unreachable endpoint.",
+            "when": "The ingest function is called."
+          },
+          "type": "negative"
+        },
+        {
+          "description": "Test ingestion when the cloud ingestion endpoint returns a 500 Internal Server Error.",
+          "id": "tc_ingest_post_internal_server_error",
+          "implementation_id": "cloud_ingestion_service_ingest",
+          "name": "ingest_with_internal_server_error_response",
+          "test_setup": {
+            "given": "A valid cloud ingest URL and valid hashed meter data, but the endpoint returns 500 Internal Server Error.",
+            "then": "Raises a RuntimeError indicating ingestion failed.",
+            "when": "The ingest function is called."
+          },
+          "type": "negative"
+        }
+      ]
+    },
+    {
+      "implementation_id": "logger_setup_and_usage",
+      "test_cases": [
+        {
+          "description": "Verify logger is created with the specified name and is an instance of logging.Logger.",
+          "id": "TC_setup_logger_basic_creation",
+          "implementation_id": "logger_setup_and_usage",
+          "name": "test_basic_logger_creation",
+          "test_setup": {
+            "given": "A valid string 'my_logger' as logger name.",
+            "then": "A logger instance named 'my_logger' with INFO level and a StreamHandler attached is returned.",
+            "when": "setup_logger('my_logger') is called."
+          },
+          "type": "positive"
+        },
+        {
+          "description": "Ensure the logger's level is set to INFO.",
+          "id": "TC_setup_logger_log_level",
+          "implementation_id": "logger_setup_and_usage",
+          "name": "test_logger_log_level_info",
+          "test_setup": {
+            "given": "A valid logger name.",
+            "then": "Logger level should be logging.INFO.",
+            "when": "setup_logger('info_logger') is called."
+          },
+          "type": "positive"
+        },
+        {
+          "description": "Verify that a StreamHandler is attached to the logger and outputs to stdout.",
+          "id": "TC_setup_logger_stream_handler_attached",
+          "implementation_id": "logger_setup_and_usage",
+          "name": "test_stream_handler_attached",
+          "test_setup": {
+            "given": "A valid logger name.",
+            "then": "Logger handlers should include a StreamHandler with sys.stdout as stream.",
+            "when": "setup_logger('stream_logger') is called."
+          },
+          "type": "positive"
+        },
+        {
+          "description": "Check that the log messages are formatted with a timestamp and level.",
+          "id": "TC_setup_logger_formatter",
+          "implementation_id": "logger_setup_and_usage",
+          "name": "test_log_formatter",
+          "test_setup": {
+            "given": "A valid logger name.",
+            "then": "Output log message should contain a timestamp and log level in the correct format.",
+            "when": "setup_logger('format_logger') is called and a message is logged."
+          },
+          "type": "positive"
+        },
+        {
+          "description": "Calling setup_logger multiple times with the same name should not attach duplicate handlers.",
+          "id": "TC_setup_logger_same_name_multiple_times",
+          "implementation_id": "logger_setup_and_usage",
+          "name": "test_logger_same_name_multiple_calls",
+          "test_setup": {
+            "given": "A logger name used more than once.",
+            "then": "Logger should only have one StreamHandler attached, avoiding duplicate logs.",
+            "when": "setup_logger('repeat_logger') is called multiple times."
+          },
+          "type": "edge"
+        },
+        {
+          "description": "Test behavior when an empty string is provided as the logger name.",
+          "id": "TC_setup_logger_empty_logger_name",
+          "implementation_id": "logger_setup_and_usage",
+          "name": "test_empty_logger_name",
+          "test_setup": {
+            "given": "An empty string as logger name.",
+            "then": "A logger instance with an empty name is returned and functions as expected.",
+            "when": "setup_logger('') is called."
+          },
+          "type": "edge"
+        },
+        {
+          "description": "Test behavior when None is provided as the logger name.",
+          "id": "TC_setup_logger_none_logger_name",
+          "implementation_id": "logger_setup_and_usage",
+          "name": "test_none_logger_name",
+          "test_setup": {
+            "given": "None as logger name.",
+            "then": "Function should raise a TypeError or handle the None value appropriately.",
+            "when": "setup_logger(None) is called."
+          },
+          "type": "negative"
+        },
+        {
+          "description": "Test behavior when a non-string type (e.g., integer) is passed as logger name.",
+          "id": "TC_setup_logger_non_string_name",
+          "implementation_id": "logger_setup_and_usage",
+          "name": "test_non_string_logger_name",
+          "test_setup": {
+            "given": "An integer 123 as logger name.",
+            "then": "Function should raise a TypeError or handle the non-string input gracefully.",
+            "when": "setup_logger(123) is called."
+          },
+          "type": "negative"
+        },
+        {
+          "description": "Test with an extremely long logger name string.",
+          "id": "TC_setup_logger_large_name",
+          "implementation_id": "logger_setup_and_usage",
+          "name": "test_very_long_logger_name",
+          "test_setup": {
+            "given": "A logger name string with 1000 characters.",
+            "then": "Logger is created successfully with the long name and functions as expected.",
+            "when": "setup_logger('a'*1000) is called."
+          },
+          "type": "edge"
+        },
+        {
+          "description": "Simulate an exception when attaching a StreamHandler to verify robust error handling.",
+          "id": "TC_setup_logger_handler_failure",
+          "implementation_id": "logger_setup_and_usage",
+          "name": "test_handler_setup_failure",
+          "test_setup": {
+            "given": "Mock StreamHandler to throw an exception on initialization.",
+            "then": "Function should handle the exception gracefully, possibly by logging the error or raising a custom exception.",
+            "when": "setup_logger('fail_logger') is called."
+          },
+          "type": "negative"
+        }
+      ]
+    }
+  ],
   "component": [],
   "endpoint": []
 }
