@@ -123,7 +123,8 @@
           },
           "type": "negative"
         }
-      ]
+      ],
+      "test_path": ".codevalid/tests/task_5432109876_20240609000000/ekm_controller_run_extraction_cycle.py"
     },
     {
       "implementation_id": "ekm_api_repository_fetch_meter_data",
@@ -248,7 +249,8 @@
           },
           "type": "edge"
         }
-      ]
+      ],
+      "test_path": ".codevalid/tests/task_5432109876_20240609000000/ekm_api_repository_fetch_meter_data.py"
     },
     {
       "implementation_id": "hashing_service_hash_meter_data",
@@ -373,7 +375,8 @@
           },
           "type": "negative"
         }
-      ]
+      ],
+      "test_path": ".codevalid/tests/task_5432109876_20240609000000/hashing_service_hash_meter_data.py"
     },
     {
       "implementation_id": "cloud_ingestion_service_ingest",
@@ -498,7 +501,8 @@
           },
           "type": "negative"
         }
-      ]
+      ],
+      "test_path": ".codevalid/tests/task_5432109876_20240609000000/cloud_ingestion_service_ingest.py"
     },
     {
       "implementation_id": "logger_setup_and_usage",
@@ -623,7 +627,8 @@
           },
           "type": "negative"
         }
-      ]
+      ],
+      "test_path": ".codevalid/tests/task_5432109876_20240609000000/logger_setup_and_usage.py"
     }
   ],
   "component": [],
